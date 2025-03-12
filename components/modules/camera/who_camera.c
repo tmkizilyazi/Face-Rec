@@ -62,8 +62,19 @@ void register_camera(const pixformat_t pixel_fromat,
     config.frame_size = frame_size;
     config.jpeg_quality = 12;
     config.fb_count = fb_count;
-    config.fb_location = CAMERA_FB_IN_PSRAM;
+    // Try using DRAM instead of PSRAM for frame buffers if PSRAM is limited
+    config.fb_location = CAMERA_FB_IN_DRAM;
+    // Use GRAB_WHEN_EMPTY mode to reduce memory usage
     config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+    
+    // Log memory status before initialization
+    ESP_LOGI(TAG, "Camera init - free heap: %d", esp_get_free_heap_size());
+    
+    // Reduce frame buffer count if needed
+    if (fb_count > 1 && frame_size > FRAMESIZE_QVGA) {
+        config.fb_count = 1;
+        ESP_LOGW(TAG, "Reducing frame buffer count to 1 due to large frame size");
+    }
 
     // camera init
     esp_err_t err = esp_camera_init(&config);

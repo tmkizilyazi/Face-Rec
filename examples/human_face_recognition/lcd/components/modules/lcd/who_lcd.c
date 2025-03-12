@@ -6,6 +6,9 @@
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
 
+// Kamera görüntüsünü doğrudan göstermek için tanımlama
+#define DISPLAY_CAMERA_DIRECTLY 1
+
 static const char *TAG = "who_lcd";
 
 static esp_lcd_panel_handle_t panel_handle = NULL;
@@ -79,10 +82,16 @@ esp_err_t register_lcd(const QueueHandle_t frame_i, const QueueHandle_t frame_o,
     // turn on display
     esp_lcd_panel_disp_on_off(panel_handle, true);
 
-    app_lcd_set_color(0x000000);
+    app_lcd_set_color(0x000000); // Ekranı siyaha boyayalım
     vTaskDelay(pdMS_TO_TICKS(200));
+    
+    // Logo gösterimi, DISPLAY_CAMERA_DIRECTLY tanımlı değilse yapılacak
+#ifndef DISPLAY_CAMERA_DIRECTLY
     app_lcd_draw_wallpaper();
     vTaskDelay(pdMS_TO_TICKS(200));
+#else
+    ESP_LOGI(TAG, "Doğrudan kamera görüntüsü gösterme etkinleştirildi - logo atlanıyor");
+#endif
 
     xQueueFrameI = frame_i;
     xQueueFrameO = frame_o;
@@ -107,23 +116,23 @@ void app_lcd_draw_wallpaper()
 
 void app_lcd_set_color(int color)
 {
-    uint16_t *buffer = (uint16_t *)heap_caps_malloc(BOARD_LCD_H_RES * sizeof(uint16_t), MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);
+    uint16_t *buffer = (uint16_t *)malloc(BOARD_LCD_H_RES * sizeof(uint16_t));
     if (NULL == buffer)
     {
         ESP_LOGE(TAG, "Memory for bitmap is not enough");
-        return;
     }
-    
-    for (size_t i = 0; i < BOARD_LCD_H_RES; i++)
+    else
     {
-        buffer[i] = color;
+        for (size_t i = 0; i < BOARD_LCD_H_RES; i++)
+        {
+            buffer[i] = color;
+        }
+
+        for (int y = 0; y < BOARD_LCD_V_RES; y++)
+        {
+            esp_lcd_panel_draw_bitmap(panel_handle, 0, y, BOARD_LCD_H_RES, y+1, buffer);
+        }
+
+        free(buffer);
     }
-
-    for (int y = 0; y < BOARD_LCD_V_RES; y++)
-    {
-        esp_lcd_panel_draw_bitmap(panel_handle, 0, y, BOARD_LCD_H_RES, y+1, buffer);
-    }
-
-    heap_caps_free(buffer);
-
-}
+} 

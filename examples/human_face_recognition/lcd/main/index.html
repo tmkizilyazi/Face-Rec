@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <!-- UTF-8 ayarı -->
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RFGATE Yüz Tanıma Yönetim Arayüzü</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif; 
+      background: #f0f0f0; 
+      margin:0; 
+      padding:0;
+    }
+    header {
+      background: #333; 
+      color: #fff; 
+      padding: 10px; 
+      display:flex; 
+      align-items:center; 
+      justify-content:space-between;
+    }
+    header h1 {
+      margin: 0; 
+      font-size: 20px;
+    }
+    nav {
+      display: flex; 
+      gap: 20px;
+    }
+    nav a {
+      color: #fff; 
+      text-decoration: none; 
+      font-size:14px; 
+      cursor:pointer;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    .container {
+      padding: 20px;
+    }
+    .message {
+      background: #e0ffe0; 
+      border: 1px solid #b0e0b0; 
+      padding: 10px; 
+      margin-bottom: 20px; 
+      display:none;
+    }
+    .error {
+      background:#ffe0e0; 
+      border:1px solid #e0b0b0;
+    }
+    .section {
+      display:none;
+    }
+    .section.active {
+      display:block;
+    }
+    .user-form {
+      margin-bottom:20px; 
+      background:#fff; 
+      padding:20px; 
+      border-radius:5px; 
+      box-shadow:0 0 5px rgba(0,0,0,0.1);
+    }
+    .user-form input[type="text"],
+    .user-form input[type="password"] {
+      padding:8px; 
+      width:200px; 
+      border:1px solid #ccc; 
+      border-radius:3px; 
+      margin-right:10px;
+    }
+    .user-form button {
+      padding:8px 15px; 
+      background:#333; 
+      color:#fff; 
+      border:none; 
+      border-radius:3px; 
+      cursor:pointer; 
+      margin-right:10px;
+    }
+    .user-form button:hover {
+      background:#555;
+    }
+    table {
+      width:100%; 
+      border-collapse:collapse; 
+      background:#fff; 
+      box-shadow:0 0 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      text-align:left; 
+      padding:10px; 
+      border-bottom:1px solid #ccc;
+    }
+    th {
+      background:#f7f7f7;
+    }
+    td button {
+      padding:5px 10px; 
+      border:none; 
+      background:#e00; 
+      color:#fff; 
+      border-radius:3px; 
+      cursor:pointer;
+    }
+    td button:hover {
+      background:#a00;
+    }
+    #langSelect {
+      background: #555;
+      color: #fff;
+      border: none;
+      padding: 5px;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Yüz Tanıma Yönetim Arayüzü</h1>
+  <div style="display:flex; align-items:center; gap:20px;">
+    <nav>
+      <a id="menuEnroll">Kayıt</a>
+      <a id="menuList">Liste</a>
+      <a id="menuConfig">Ayarlar</a>
+      <a id="menuHelp">Yardım</a>
+    </nav>
+    <select id="langSelect">
+      <option value="tr">Türkçe</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+</header>
+
+<div class="container">
+  <div class="message" id="messageBox"></div>
+
+  <!-- Kayıt (Enroll) Bölümü -->
+  <div class="section" id="enrollSection">
+    <div class="user-form">
+      <h2>Yeni Kullanıcı Ekle</h2>
+      <input type="text" id="newUserName" placeholder="Kullanıcı ismi giriniz" />
+      <button id="addUserBtn">Ekle</button>
+      <button id="saveUserBtn" style="display:none;">Kaydet</button>
+    </div>
+  </div>
+
+  <!-- Liste Bölümü -->
+  <div class="section" id="listSection">
+    <h2>Kayıtlı Kullanıcılar</h2>
+    <table id="userTable">
+      <thead><tr><th>ID</th><th>İsim</th><th>İşlem</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Ayarlar Bölümü -->
+  <div class="section" id="configSection">
+    <h2>Wi-Fi ve MQTT Ayarları</h2>
+    <div class="user-form">
+      <label>Wi-Fi SSID:</label>
+      <input type="text" id="wifiSsid" placeholder="WiFi SSID">
+      <label>Wi-Fi Şifre:</label>
+      <input type="password" id="wifiPass" placeholder="WiFi Şifre">
+      <br><br>
+
+      <label>MQTT Broker URI:</label>
+      <input type="text" id="mqttBroker" placeholder="mqtt://192.168.1.14:1883">
+      <label>MQTT Kullanıcı:</label>
+      <input type="text" id="mqttUser" placeholder="Kullanıcı Adı (opsiyonel)">
+      <label>MQTT Şifre:</label>
+      <input type="password" id="mqttPass" placeholder="Şifre (opsiyonel)">
+      <br><br>
+      <button id="btnSaveAll">Kaydet</button>
+    </div>
+
+    <!-- Son Kaydedilen Ayarlar Gösterimi -->
+    <div id="currentConfig" style="margin-top:20px; background:#fff; padding:10px; border-radius:4px; box-shadow:0 0 3px rgba(0,0,0,0.1);">
+      <h4>Son Kaydedilen Ayarlar</h4>
+      <p id="cfgWifi"></p>
+      <p id="cfgMqtt"></p>
+    </div>
+  </div>
+
+  <!-- Yardım Bölümü -->
+  <div class="section" id="helpSection">
+    <div class="help-content">
+      <h2>Yardım</h2>
+      <p>Bu bölümde yardım dokümanları yer alacak...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // -------- DOM Referansları --------
+  const messageBox       = document.getElementById('messageBox');
+  const userTableBody    = document.querySelector('#userTable tbody');
+  const addUserBtn       = document.getElementById('addUserBtn');
+  const saveUserBtn      = document.getElementById('saveUserBtn');
+  const newUserNameInput = document.getElementById('newUserName');
+
+  const enrollSection    = document.getElementById('enrollSection');
+  const listSection      = document.getElementById('listSection');
+  const helpSection      = document.getElementById('helpSection');
+  const configSection    = document.getElementById('configSection');
+
+  const menuEnroll       = document.getElementById('menuEnroll');
+  const menuList         = document.getElementById('menuList');
+  const menuHelp         = document.getElementById('menuHelp');
+  const menuConfig       = document.getElementById('menuConfig');
+
+  const langSelect       = document.getElementById('langSelect');
+
+  // Wi-Fi & MQTT input
+  const wifiSsidInput    = document.getElementById('wifiSsid');
+  const wifiPassInput    = document.getElementById('wifiPass');
+  const mqttBrokerInput  = document.getElementById('mqttBroker');
+  const mqttUserInput    = document.getElementById('mqttUser');
+  const mqttPassInput    = document.getElementById('mqttPass');
+  const btnSaveAll       = document.getElementById('btnSaveAll');
+
+  // Son kaydedilen ayarlar gösterimi
+  const cfgWifiText      = document.getElementById('cfgWifi');
+  const cfgMqttText      = document.getElementById('cfgMqtt');
+
+  // -------- Dil Seçimi --------
+  langSelect.addEventListener('change', () => {
+    const chosenLang = langSelect.value;
+    if(chosenLang === 'en') {
+      document.querySelector('h1').textContent = "Face Recognition Admin Interface(MASTER)";
+      menuEnroll.textContent = "Enroll";
+      menuList.textContent   = "List";
+      menuConfig.textContent = "Config";
+      menuHelp.textContent   = "Help";
+
+      enrollSection.querySelector('h2').textContent = "New User Enrollment";
+      newUserNameInput.placeholder = "Enter user name";
+      addUserBtn.textContent = "Add";
+      saveUserBtn.textContent = "Save";
+
+      listSection.querySelector('h2').textContent = "Registered Users";
+      helpSection.querySelector('h2').textContent = "Help";
+      helpSection.querySelector('p').textContent  = "Help documentation will be here...";
+
+      configSection.querySelector('h2').textContent = "Wi-Fi & MQTT Settings";
+      wifiSsidInput.placeholder = "WiFi SSID";
+      wifiPassInput.placeholder = "WiFi Password";
+      mqttBrokerInput.placeholder = "mqtt://192.168.1.14:1883";
+      mqttUserInput.placeholder   = "MQTT User (optional)";
+      mqttPassInput.placeholder   = "MQTT Pass (optional)";
+      btnSaveAll.textContent      = "Save";
+
+    } else {
+      document.querySelector('h1').textContent = "Yüz Tanıma Yönetim Arayüzü(MASTER)";
+      menuEnroll.textContent = "Kayıt";
+      menuList.textContent   = "Liste";
+      menuConfig.textContent = "Ayarlar";
+      menuHelp.textContent   = "Yardım";
+
+      enrollSection.querySelector('h2').textContent = "Yeni Kullanıcı Ekle";
+      newUserNameInput.placeholder = "Kullanıcı ismi giriniz";
+      addUserBtn.textContent = "Ekle";
+      saveUserBtn.textContent = "Kaydet";
+
+      listSection.querySelector('h2').textContent = "Kayıtlı Kullanıcılar";
+      helpSection.querySelector('h2').textContent = "Yardım";
+      helpSection.querySelector('p').textContent  = "Bu bölümde yardım dokümanları yer alacak...";
+
+      configSection.querySelector('h2').textContent = "Wi-Fi ve MQTT Ayarları";
+      wifiSsidInput.placeholder = "WiFi SSID";
+      wifiPassInput.placeholder = "WiFi Şifre";
+      mqttBrokerInput.placeholder = "mqtt://192.168.1.14:1883";
+      mqttUserInput.placeholder   = "Kullanıcı Adı (opsiyonel)";
+      mqttPassInput.placeholder   = "Şifre (opsiyonel)";
+      btnSaveAll.textContent      = "Kaydet";
+    }
+  });
+
+  // -------- Mesaj Gösterimi --------
+  function showMessage(msg, isError=false) {
+    messageBox.textContent = msg;
+    if(isError) {
+      messageBox.classList.add('error');
+    } else {
+      messageBox.classList.remove('error');
+    }
+    messageBox.style.display = 'block';
+    setTimeout(() => {
+      messageBox.style.display='none';
+    }, 3000);
+  }
+
+  // -------- Kullanıcı Listesi --------
+  async function loadUsers() {
+    try {
+      const res = await fetch('/users');
+      const data = await res.json(); // beklenen: [{id, code, name}, ...]
+      renderUsers(data);
+    } catch (err) {
+      console.error('Error loading users:', err);
+    }
+  }
+
+  function renderUsers(users) {
+  userTableBody.innerHTML = '';
+  users.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td id="code">${u.code}</td>
+      <td id="name">${u.name}</td>
+      <td><button data-id="${u.id}">Sil</button></td>
+    `;
+    userTableBody.appendChild(tr);
+  });
+}
+
+
+  // -------- Yeni Kullanıcı Ekle --------
+  addUserBtn.addEventListener('click', async () => {
+    const name = newUserNameInput.value.trim();
+    if (!name) {
+      showMessage("İsim boş olamaz!", true);
+      return;
+    }
+    try {
+      const res = await fetch(`/add_user?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      if (data.status === 'enroll_prepare') {
+        showMessage("Lütfen kameraya bakın ve yüzünüzü sabitleyin, sonra 'Kaydet' butonuna basın.");
+        saveUserBtn.style.display = 'inline-block';
+      } else {
+        showMessage("Kullanıcı eklenemedi!", true);
+      }
+    } catch (err) {
+      showMessage("Hata oluştu: " + err, true);
+    }
+  });
+
+  // -------- Kayıt Yap => (Save Enroll) --------
+  saveUserBtn.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/save_user');
+      const data = await res.json();
+      if (data.status === 'enroll_requested') {
+        showMessage("Kullanıcı kaydediliyor...");
+        setTimeout(async () => {
+          await loadUsers();
+          showMessage("Kullanıcı kaydedildi!");
+          saveUserBtn.style.display = 'none';
+          newUserNameInput.value = '';
+        }, 3000);
+      } else {
+        showMessage("Kaydetme işlemi başarısız!", true);
+      }
+    } catch (err) {
+      showMessage("Hata oluştu: " + err, true);
+    }
+  });
+
+  // -------- Silme --------
+  userTableBody.addEventListener('click', async (e) => {
+    if (e.target.tagName === 'BUTTON') {
+      const id = e.target.getAttribute('data-id'); // numeric ID
+      if (confirm(`ID ${id} olan kullanıcıyı silmek istediğinize emin misiniz?`)) {
+        try {
+          const res = await fetch(`/delete_user?id=${id}`);
+          const data = await res.json();
+          if (data.status === 'delete_requested') {
+            showMessage(`ID ${id} olan kullanıcı siliniyor...`);
+            setTimeout(loadUsers, 2000);
+          } else {
+            showMessage("Silme işlemi başarısız!",true);
+          }
+        } catch (err) {
+          showMessage("Hata oluştu: " + err,true);
+        }
+      }
+    }
+  });
+
+  // -------- /get_config ile Son Ayarları Çek --------
+  async function loadCurrentConfig() {
+    try {
+      const res = await fetch('/get_config');
+      const data = await res.json();
+      // data = { wifi_ssid, wifi_pass, mqtt_broker, mqtt_user, mqtt_pass }
+      cfgWifiText.textContent = `Wi-Fi => SSID: ${data.wifi_ssid}, Pass: ${data.wifi_pass}`;
+      cfgMqttText.textContent = `MQTT => Broker: ${data.mqtt_broker}, User: ${data.mqtt_user}, Pass: ${data.mqtt_pass}`;
+      // input alanlarını da doldurmak isterseniz:
+      wifiSsidInput.value    = data.wifi_ssid   || '';
+      wifiPassInput.value    = data.wifi_pass   || '';
+      mqttBrokerInput.value  = data.mqtt_broker || '';
+      mqttUserInput.value    = data.mqtt_user   || '';
+      mqttPassInput.value    = data.mqtt_pass   || '';
+    } catch (err) {
+      console.error("loadCurrentConfig error:", err);
+    }
+  }
+
+  // -------- Wi-Fi + MQTT Kaydet --------
+  btnSaveAll.addEventListener('click', async () => {
+    const ssid   = wifiSsidInput.value.trim();
+    const wpass  = wifiPassInput.value.trim();
+    const broker = mqttBrokerInput.value.trim();
+    const muser  = mqttUserInput.value.trim();
+    const mpass  = mqttPassInput.value.trim();
+
+    if(!ssid) {
+      showMessage("Wi-Fi SSID boş olamaz!", true);
+      return;
+    }
+
+    const url = `/set_config?ssid=${encodeURIComponent(ssid)}`
+              + `&pass=${encodeURIComponent(wpass)}`
+              + `&broker=${encodeURIComponent(broker)}`
+              + `&user=${encodeURIComponent(muser)}`
+              + `&mpass=${encodeURIComponent(mpass)}`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.status === 'ok') {
+        showMessage("Ayarlar kaydedildi, cihaz yeniden başlatılıyor...");
+      } else {
+        showMessage("Ayar kaydetme hatası!", true);
+      }
+    } catch(err) {
+      showMessage("Hata oluştu: " + err, true);
+    }
+  });
+
+  // -------- Bölümler Arası Geçiş --------
+  function showSection(sec) {
+    enrollSection.classList.remove('active');
+    listSection.classList.remove('active');
+    helpSection.classList.remove('active');
+    configSection.classList.remove('active');
+    sec.classList.add('active');
+  }
+
+  menuEnroll.addEventListener('click', () => {
+    showSection(enrollSection);
+  });
+  menuList.addEventListener('click', () => {
+    showSection(listSection);
+    loadUsers();
+  });
+  menuHelp.addEventListener('click', () => {
+    showSection(helpSection);
+  });
+  menuConfig.addEventListener('click', () => {
+    showSection(configSection);
+    loadCurrentConfig();  // Ayarlar sekmesine girince mevcut config'i çek
+  });
+
+  // Varsayılan görünüm => Kayıt bölümü
+  showSection(enrollSection);
+</script>
+</body>
+</html>
